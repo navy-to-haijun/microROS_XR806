@@ -1,0 +1,6 @@
+*.o
+*.d
+image/
+gcc/*bin
+gcc/*elf
+gcc/*map
