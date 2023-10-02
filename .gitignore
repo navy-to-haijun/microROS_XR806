@@ -4,3 +4,4 @@ image/
 gcc/*bin
 gcc/*elf
 gcc/*map
+gcc/*ld
