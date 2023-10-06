@@ -8,6 +8,8 @@
 
 #include <std_msgs/msg/int32.h>
 
+#if defined MICROROS_PUB_INT32
+
 static rcl_publisher_t publisher;
 static std_msgs__msg__Int32 msg;
 
@@ -43,10 +45,7 @@ void microros_pub_int32()
 
 void microros_pub_int32_init()
 {
-    #if defined MICROROS_SERIAL
     set_microros_transports();
-    #endif
-
     allocator = rcl_get_default_allocator();
 
     //create init_options
@@ -75,4 +74,5 @@ void microros_pub_int32_init()
     msg.data = 0;
     printf("micro_ros init successful.\n");
 }
+#endif
 

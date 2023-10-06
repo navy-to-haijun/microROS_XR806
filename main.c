@@ -37,7 +37,8 @@
 #include "common/framework/net_ctrl.h"
 #include "common/framework/platform_init.h"
 #include "lwip/inet.h"
-#include "lwip/sockets.h"
+
+#include"transport/microros_xr806.h"
 
 
 #define LED_PORT            GPIO_PORT_A
@@ -46,18 +47,21 @@
 char *sta_ssid = "CU_7daysinn203";
 char *sta_psk = "77777777";
 
-#define REMOTE_IP	 "192.168.6.5"
-#define PORT	     8080
-
-
 HAL_Status status = HAL_ERROR;
 
-extern void microros_pub_int32();
-extern  void microros_pub_int32_init();
-
-extern void microros_sub_int32();
-extern void microros_sub_int32_init();
-
+static int wlan_connected;
+#if defined MICROROS_PUB_INT32
+	extern void microros_pub_int32_init()
+	extern void microros_pub_int32();
+#endif
+#if defined MICROROS_SUB_INT32
+	extern void microros_sub_int32_init();
+	extern void microros_sub_int32();
+#endif
+#if defined MICROROS_PUB_SUB
+	extern void microros_pub_sub_init();
+	extern void microros_pub_sub();
+#endif
 /*LED 初始化*/
 static void led_init(void)
 {
@@ -68,7 +72,7 @@ static void led_init(void)
 	HAL_GPIO_Init(LED_PORT, LED_PIN, &param);
 }
 
-uint8_t wlan_connected;
+/*网络状态判断*/
 void wlan_ctrl_msg_proc(uint32_t event, uint32_t data, void *arg)
 {
 	uint16_t type = EVENT_SUBTYPE(event);
@@ -103,7 +107,7 @@ void wlan_ctrl_msg_proc(uint32_t event, uint32_t data, void *arg)
 		break;
 	}
 }
-
+/*网络状态获取*/
 int wlan_net_ctrl_init(void)
 {
 	observer_base *ob = sys_callback_observer_create(CTRL_MSG_TYPE_NETWORK,
@@ -117,7 +121,7 @@ int wlan_net_ctrl_init(void)
 
 	return 0;
 }
-
+/*网络连接*/
 void wlan_connect(void)
 {
 	/* 查询网络状态 */
@@ -132,43 +136,18 @@ void wlan_connect(void)
 	return;
 }
 
-/*UDP初始化*/
-int sock;
-struct sockaddr_in server_addr;
-
-int16_t udpclient_init(){
-	/*创建一个socket*/
-	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1){
-		printf("Socket error\n");
-		return -1;
-	}
-	 /* 初始化预连接的服务端地址 */
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(PORT);
-	server_addr.sin_addr.s_addr = inet_addr(REMOTE_IP);
-	memset(&(server_addr.sin_zero), 0, sizeof(server_addr.sin_zero));
-	/*连接*/
-	if(connect(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) < 0){
-		printf("Connect <%d> fail!\n", sock);
-        return -2;
-	}
-    printf("Connect %d sucessful!\n", sock);
-  
-	return 0;
-}
-
-char send_data[] = "send data to remote IP\n";
-int16_t len;
-char buffer[100];
 int main(void)
 {
 	uint8_t led_flag = 0;
 	platform_init();
 	led_init();
-	wlan_connect();
 	HAL_GPIO_WritePin(LED_PORT, LED_PIN, 1);
-	// microros_pub_int32_init();
-	// microros_sub_int32_init();
+
+	#if defined MICROROS_UDP
+	wlan_connect();
+	#endif
+	
+	#if defined MICROROS_UDP
 	while (wlan_connected == 0) {
 		printf("\n Wait for WiFi connection...\n\n");
 		printf("\n or \n");
@@ -178,39 +157,32 @@ int main(void)
 	}
 	OS_Sleep(2);
 
-	if(udpclient_init() == 0){
-		printf("Udp Init Successful");
-	}
-	/*发送测试*/
-	len = sendto(sock, send_data, strlen(send_data), 0,(struct sockaddr *)&server_addr, sizeof(struct sockaddr));
-	printf("len = %d", len);
+	#endif
+	#if defined MICROROS_PUB_INT32
+	microros_pub_int32_init()
+	#endif
+	#if defined MICROROS_SUB_INT32
+	microros_sub_int32_init();
+	#endif
+	#if defined MICROROS_PUB_SUB
+	microros_pub_sub_init();
+	#endif
+
 	while (1) {
-		if(wlan_connected){
-			led_flag++;
-			HAL_GPIO_WritePin(LED_PORT, LED_PIN, led_flag % 2);
-			/*接收测试*/
-			len = recv(sock, (void *)buffer, 100, 0);
-			if(len > 0){
-				for(int16_t i = 0; i < len; i++)
-				{
-					printf("%c", buffer[i]);
-				}
-				printf("\n");
-			}
-			
-			OS_MSleep(500);
-		}
-		/*WiFi中断*/
-		else{
-			HAL_GPIO_WritePin(LED_PORT, LED_PIN, led_flag % 2);
-			OS_MSleep(100);
-		}
-		
 
-		// microros_pub_int32();
-		// microros_sub_int32();
+		led_flag++;
+		HAL_GPIO_WritePin(LED_PORT, LED_PIN, led_flag % 2);
 
-		
+		#if defined MICROROS_PUB_INT32
+		microros_pub_int32();
+		#endif
+		#if defined MICROROS_SUB_INT32
+		microros_sub_int32();
+		#endif
+		#if defined MICROROS_PUB_SUB
+		microros_pub_sub();
+		#endif
+
 	}
 	return 0;
 }

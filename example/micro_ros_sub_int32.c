@@ -8,6 +8,8 @@
 
 #include <stdio.h>
 
+#if defined MICROROS_SUB_INT32
+
 #define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Aborting.\n",__LINE__,(int)temp_rc); return;}}
 #define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){printf("Failed status on line %d: %d. Continuing.\n",__LINE__,(int)temp_rc);}}
 
@@ -35,9 +37,7 @@ void microros_sub_int32()
 
 void microros_sub_int32_init()
 {
-    #if defined MICROROS_SERIAL
-        set_microros_transports();
-    #endif
+    set_microros_transports();
 
     allocator = rcl_get_default_allocator();
     // create init_options
@@ -59,3 +59,4 @@ void microros_sub_int32_init()
      printf("micro_ros init successful.\n");
     // ros2 topic pub /micro_ros_xr806_node_subscriber std_msgs/msg/Int32 data:\ 12
 }
+#endif
